@@ -178,7 +178,7 @@ public class Crypto {
     }
 
     public static String encryptPkcs12(String plaintext, SecretKey key,
-            byte[] salt) {
+                                       byte[] salt) {
         try {
             Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
 
@@ -241,7 +241,7 @@ public class Crypto {
     }
 
     public static String decryptPkcs12(byte[] cipherBytes, SecretKey key,
-            byte[] salt) {
+                                       byte[] salt) {
         try {
             Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
             PBEParameterSpec pbeSpec = new PBEParameterSpec(salt,
@@ -312,6 +312,28 @@ public class Crypto {
         byte[] cipherBytes = fromBase64(fields[1]);
 
         return decrypt(cipherBytes, key, iv);
+    }
+
+    public static String deriveKeyPbkdfData(byte[] salt, String password) {
+        try {
+            long start = System.currentTimeMillis();
+            KeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt,
+                    ITERATION_COUNT, KEY_LENGTH);
+            SecretKeyFactory keyFactory = SecretKeyFactory
+                    .getInstance(PBKDF2_DERIVATION_ALGORITHM);
+            byte[] keyBytes = keyFactory.generateSecret(keySpec).getEncoded();
+            Log.d(TAG, "key bytes: " + toHex(keyBytes));
+
+            SecretKey secretKey = new SecretKeySpec(keyBytes, "AES");
+
+            long elapsed = System.currentTimeMillis() - start;
+            Log.d(TAG, String.format("PBKDF2 key derivation took %d [ms].",
+                    elapsed));
+
+            return toBase64(secretKey.getEncoded());
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
